@@ -1,4 +1,4 @@
-# Atividade capacitação em mircroelênica digital
+# Atividade - capacitação em microeltrônica digital
 
 ### Homeworks 1, 2 e 3 da Siemens
 
