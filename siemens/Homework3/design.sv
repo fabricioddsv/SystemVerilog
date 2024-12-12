@@ -1,31 +1,12 @@
-// Code your design here
-interface bus_if #(parameter DATA_WIDTH = 32) ();
-    // Sinais do barramento
-    logic [DATA_WIDTH-1:0] data; // Dados transmitidos
-    logic [7:0] address;         // Endereço do escravo
-    logic WB, RB;                // Sinais de controle (Write e Read)
-    logic Ack;                   // Sinal de handshaking
-    logic parity;                // Bit de paridade
+`ifndef BUS_IF
+`define BUS_IF
+    interface bus_if #(parameter int BUS_WIDTH = 8);
+      logic RB,WB,ACK,PARITY; // para escrita,leitura,ack jogar nivel logico baixo = 1'b0; bit de paridade é variavel. 
+      logic [BUS_WIDTH-1:0] data; //dados vindo ou indo para o slave.
+      logic [7:0] address; // Endereço de 8 bits referente ao slave
 
-    // Modport para o mestre
-    modport master (
-        output data, output address, output WB, output RB,
-        input Ack, output parity
-    ); 
-  
-    // Modport para o escravo
-    modport slave (
-        input data, input address, input WB, input RB,
-        output Ack, input parity
-    );
+      modport master(input ACK,inout data, PARITY, output WB,RB,address); //modport para o mestre
+      modport slave(input WB,RB,address,inout data, PARITY,output ACK); //modport para o slave
+    endinterface
+`endif
 
-    // Função para calcular paridade
-    function logic calc_parity(input logic [DATA_WIDTH-1:0] data);
-        calc_parity = ^data; // XOR bit a bit para calcular paridade
-    endfunction
-
-    // Função para verificar paridade
-    function logic check_parity(input logic [DATA_WIDTH-1:0] data, input logic parity_bit);
-        check_parity = (^data == parity_bit);
-    endfunction
-endinterface

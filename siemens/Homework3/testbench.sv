@@ -1,50 +1,38 @@
-// Code your testbench here
-// or browse Examples
-//`include "bus_if.sv" // Incluir a interface do barramento
+`include "design.sv"
 `include "slave_module.sv"
-`include "master_module.sv"
+module tb_slave_ds;
+    parameter int BUS_WIDTH = 8;
+    parameter logic [7:0] id = 8'hF0;
 
-module tb_master_slave;
+    logic clk, reset;
+    bus_if #(BUS_WIDTH) slave_br();
 
-    // Sinais de clock e reset
-    logic clk;
-    logic reset;
-
-    // Instância da interface do barramento
-    bus_if #(.DATA_WIDTH(32)) bus();
-
-    // Instância do mestre e dos escravos
-    master_module master (
+    slave_ds #(.BUS_WIDTH(BUS_WIDTH), .id(id)) uut (
+        .slave_br(slave_br),
         .clk(clk),
-        .reset(reset),
-        .bus(bus.master)
+        .reset(reset)
     );
 
-    slave_module slave1 (
-        .clk(clk),
-        .reset(reset),
-        .slave_address(8'hA5),
-        .bus(bus.slave)
-    );
-
-    slave_module slave2 (
-        .clk(clk),
-        .reset(reset),
-        .slave_address(8'hB2),
-        .bus(bus.slave)
-    );
-
-    // Geração do clock
+    initial clk = 0;
     always #5 clk = ~clk;
 
     initial begin
-        // Inicialização
-        clk = 0;
         reset = 1;
         #10 reset = 0;
 
-        // Simular por 100 unidades de tempo
-        #100 $finish;
+        slave_br.address = id;
+        slave_br.RB = 0;
+        slave_br.WB = 1;
+        slave_br.data = 8'hA5;
+        #10;
+
+        $display("WRITE: Data=%h, Parity=%b, ACK=%b", slave_br.data, slave_br.PARITY, slave_br.ACK);
+        slave_br.RB = 1;
+        slave_br.WB = 0;
+        #10;
+
+        $display("READ: Data=%h, Parity=%b, ACK=%b", slave_br.data, slave_br.PARITY, slave_br.ACK);
+        $finish;
     end
 endmodule
 

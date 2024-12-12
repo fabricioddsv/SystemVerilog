@@ -1,44 +1,42 @@
-// Code your testbench here
-// or browse Examples
-`timescale 1ns / 1ps
-
 module tb_tail_light_fsm;
+    logic clk;           
+    logic reset_n;       
+    logic [2:0] light;   
 
-    // Sinais de entrada e saída do DUT (Design Under Test)
-    logic clk;
-    logic reset_n;
-    logic [2:0] light;
-
-    // Instância do módulo tail_light_fsm
-    tail_light_fsm dut (
+    tail_light_fsm uut (
         .clk(clk),
         .reset_n(reset_n),
         .light(light)
     );
 
-    // Geração do clock
-    always #5 clk = ~clk;  // Clock com período de 10 unidades de tempo
 
-    // Processo principal de teste
+    always #5 clk = ~clk;
+
+
     initial begin
-        // Inicialização
+        $display("=== Início da simulação ===");
+     
         clk = 0;
-        reset_n = 0;
-        
-        // Aplicar reset
-        $display("Iniciando Testbench");
-        #10 reset_n = 1;  // Libera o reset após 10 unidades de tempo
-        
-        // Simular durante 50 ciclos de clock
-        repeat(50) @(posedge clk);
+        reset_n = 0; 
+        #10;
 
-        // Finalizar a simulação
-        $stop;
-    end
+        $display("[RESET] A FSM está no estado inicial com reset ativo.");
+        reset_n = 1;
+        #10;
 
-    // Monitorar as mudanças no estado e na saída
-    initial begin
-        $monitor("Tempo: %0t | Estado da luz: %b", $time, light);
+        repeat (8) begin
+            #10;
+            case (light)
+                3'b001: $display("Estado S0: Apenas a luz traseira 1 está acesa (light = %b).", light);
+                3'b011: $display("Estado S1: As luzes traseiras 1 e 2 estão acesas (light = %b).", light);
+                3'b111: $display("Estado S2: Todas as luzes traseiras estão acesas (light = %b).", light);
+                3'b000: $display("Estado S3: Todas as luzes traseiras estão apagadas (light = %b).", light);
+                default: $display("Estado inválido detectado! (light = %b)", light);
+            endcase
+        end
+
+        $display("=== Fim da simulação ===");
+        $finish;
     end
 
 endmodule

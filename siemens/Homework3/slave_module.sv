@@ -1,32 +1,66 @@
-//`include "design.sv" // Incluir a interface do barramento
-
-module slave_module (
+`include "design.sv"
+module slave_ds#(
+    parameter int BUS_WIDTH = 8,
+    parameter logic [7:0] id = 8'hF0
+)(
+    bus_if.slave slave_br,
     input logic clk,
-    input logic reset,
-    input logic [7:0] slave_address,
-    bus_if.slave bus
+    input logic reset
 );
-    logic [31:0] slave_data;
 
+    typedef enum logic [1:0] {
+        IDLE,
+        READ,
+        WRITE,
+        END_WR_RD
+    } state_t;
+
+    state_t current_state, next_state;
+    logic [BUS_WIDTH-1:0] memoria;
+
+    // State transition logic
     always_ff @(posedge clk or posedge reset) begin
         if (reset) begin
-            bus.Ack <= 0;
-        end else if (bus.WB && bus.address == slave_address) begin
-            // Escravo verifica a paridade e processa os dados
-            if (bus.check_parity(bus.data, bus.parity)) begin
-                slave_data <= bus.data;
-                $display("Escravo %h recebeu dado: %h", slave_address, bus.data);
-            end else begin
-                $display("Erro de paridade no escravo %h!", slave_address);
-            end
-            bus.Ack <= 1;
-        end else if (bus.RB && bus.address == slave_address) begin
-            // Escravo responde à leitura
-            bus.data <= slave_data;
-            bus.Ack <= 1;
+            current_state <= IDLE;
         end else begin
-            bus.Ack <= 0;
+            current_state <= next_state;
         end
     end
-endmodule
 
+    // Next state logic
+    always @(*) begin
+        
+        case (current_state)
+            IDLE: begin
+                if (slave_br.address == id && slave_br.RB == 0) begin
+                    next_state = READ;
+                end else if (slave_br.address == id && slave_br.WB == 0) begin
+                    next_state = WRITE;
+                end
+            end
+
+            READ: begin
+                slave_br.data = memoria; // Valor guardado na memória para o barramento
+                slave_br.PARITY = ^memoria; // Cálculo de paridade
+                slave_br.ACK = 0; // Confirmação de execução de comando
+                next_state = END_WR_RD;
+            end
+
+            WRITE: begin
+                memoria = slave_br.data; // Salva o valor do barramento na memória
+                slave_br.PARITY = ^memoria; // Cálculo de paridade
+                slave_br.ACK = 0; // Confirmação de execução de comando
+                next_state = END_WR_RD;
+            end
+
+            END_WR_RD: begin
+                next_state = IDLE;
+                slave_br.ACK = 1; // Valor default
+            end
+            default: begin
+                next_state = IDLE;
+                slave_br.ACK = 1; // Valor default
+            end
+        endcase
+    end
+endmodule

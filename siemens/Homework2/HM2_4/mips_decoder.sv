@@ -1,3 +1,4 @@
+`include "mips_typedef.sv"
 module mips_decoder;
 
     function void decode_instruction(input mips_instruction instr);

@@ -1,27 +1,24 @@
-`include "somador_pkg.sv"
-
-module float_adder (
-    input  logic [31:0] a,
-    input  logic [31:0] b,
-    output logic [31:0] sum
+module float_adder_double (
+    input  logic [63:0] a,
+    input  logic [63:0] b,
+    output logic [63:0] sum
 );
 
-    import float_adder_pkg::*;
-  
-    float32_t fa, fb, fsum;
-    logic [7:0] exp_diff;
-    logic [23:0] aligned_mant_a, aligned_mant_b;
-    logic [24:0] mant_sum;
-    logic [7:0] exp_sum;
+    typedef struct packed {
+        logic sign;
+        logic [10:0] exponent;
+        logic [51:0] mantissa;
+    } float64_t;
+
+    float64_t fa, fb, fsum;
+    logic [10:0] exp_diff;
+    logic [52:0] aligned_mant_a, aligned_mant_b;
+    logic [53:0] mant_sum;
+    logic [10:0] exp_sum;
 
     always_comb begin
-        fa.sign     = a[31];
-        fa.exponent = a[30:23];
-        fa.mantissa = a[22:0];
-
-        fb.sign     = b[31];
-        fb.exponent = b[30:23];
-        fb.mantissa = b[22:0];
+        fa = {a[63], a[62:52], a[51:0]};
+        fb = {b[63], b[62:52], b[51:0]};
 
         if (fa.exponent > fb.exponent) begin
             exp_diff = fa.exponent - fb.exponent;
@@ -48,17 +45,18 @@ module float_adder (
             end
         end
 
-        if (mant_sum[24]) begin
+        if (mant_sum[53]) begin
             mant_sum = mant_sum >> 1;
             exp_sum = exp_sum + 1;
-        end else if (!mant_sum[23]) begin
-            while (!mant_sum[23] && exp_sum > 0) begin
+        end else if (!mant_sum[52]) begin
+            while (!mant_sum[52] && exp_sum > 0) begin
                 mant_sum = mant_sum << 1;
                 exp_sum = exp_sum - 1;
             end
         end
+
         fsum.exponent = exp_sum;
-        fsum.mantissa = mant_sum[22:0];
+        fsum.mantissa = mant_sum[51:0];
     end
 
     assign sum = {fsum.sign, fsum.exponent, fsum.mantissa};
